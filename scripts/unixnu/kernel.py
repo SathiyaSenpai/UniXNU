@@ -102,7 +102,8 @@ def linux_env(ctx):
     ios_ver = ctx.board.get('os', {}).get('ios_version', '17.0') if ctx.schema_version == 2 else '17.0'
     extra_flags = '-mllvm -disable-atexit-based-global-dtor-lowering'
     if arch_name == 'arm64e':
-        extra_flags = ('-fptrauth-function-pointer-type-discrimination ' + extra_flags +
+        # Apple clang targets arm64e as apple-a14; upstream needs it explicitly for the DIT system register in cswitch.s.
+        extra_flags = ('-mcpu=apple-a14 -fptrauth-function-pointer-type-discrimination ' + extra_flags +
                        ' -D__ARM_ARCH_8_2__=1 -D__ARM_ARCH_8_3__=1 -D__ARM_ARCH_8_4__=1 -D__ARM_ARCH_8_5__=1')
     return {'PATH': os.pathsep.join([str(clt / 'bin'), str(toolchain / 'bin'), os.environ.get('PATH', ''), str(toolchain / 'llvm/bin')]),
             'LC_ALL': 'C', 'CLT_PREFIX': str(clt), 'XCTOOLCHAIN_PREFIX': str(xctoolchain),
