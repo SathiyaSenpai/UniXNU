@@ -112,3 +112,9 @@ With `gpu-trace=1`, kernel event 65 identifies the Metal device and command queu
 Detailed latency records identify slow encoder calls, callback invoke addresses and resource destruction. Kernel sampling of the render, encode and completion threads correlates upstream waits.
 
 With `diag=1`, encoding batch end records (type 14, phase 3) store encoding-thread CPU microseconds in field `d`. Compare this with paired start/end wall time to distinguish work from waits. `TUC` reports Turnip BO cache lookups, hits, inserts, evictions and full flushes.
+
+## iOS 27 Turnip load format
+
+Build Turnip with `python3 scripts/build-turnip-darwin.py --target ios27` as well as the plugin's `--target ios27`. The Turnip link explicitly enables `-Wl,-fixup_chains`, including when Meson reconfigures a cached build. Confirm the final signed dylib contains `LC_DYLD_CHAINED_FIXUPS`. The owner trust module must use its new CDHash.
+
+An uke 24A446 iconservicesagent report showed a stack guard fault in dyld `MachOAnalyzer::withChainStarts` while Metal opened Turnip. Legacy arm64e `LC_DYLD_INFO_ONLY` made dyld synthesize chain starts on the workqueue stack: the old library required 439,304 bytes, matching crash register x8 exactly. Chained metadata avoids that legacy synthesis. This is a load-format fix, with rendering behavior and compiler pins preserved; actual icon/widget recovery and freeze acceptance still require hardware testing. See [Apple's implementation](https://github.com/apple-oss-distributions/dyld/blob/main/common/MachOAnalyzer.cpp).

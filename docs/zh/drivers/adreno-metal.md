@@ -112,3 +112,9 @@ python3 scripts/check-native-metal-frontend-host.py
 细分延迟记录标出慢编码调用、回调入口地址和资源析构耗时。内核对渲染、编码和完成线程的采样关联上游等待。
 
 `python3 scripts/package-metal-bridge.py OUTPUT.tar.zst --target macos27` 将当前静态库、构建标识和组件源码打包，供 CI 复用。
+
+## iOS 27 Turnip 装载格式
+
+Turnip 与插件均用 `--target ios27` 构建。Turnip 链接显式启用 `-Wl,-fixup_chains`，并向 Meson 已有构建目录重新传递链接参数；最终签名 dylib 应包含 `LC_DYLD_CHAINED_FIXUPS`，owner trust 需使用新 CDHash。
+
+uke 24A446 的同 boot iconservicesagent 报告显示，Metal 打开 Turnip 时在 dyld `MachOAnalyzer::withChainStarts` 中触发线程栈 guard fault。旧 arm64e `LC_DYLD_INFO_ONLY` 导致 dyld 在工作队列栈上临时合成链元数据；旧库需要 439,304 字节，与崩溃 x8 精确相符。显式链元数据避开该兼容分支。修正保留渲染逻辑与编译器 pin；图标/小组件恢复及卡死验收仍需真机。见 [Apple 实现](https://github.com/apple-oss-distributions/dyld/blob/main/common/MachOAnalyzer.cpp)。
