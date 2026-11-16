@@ -102,8 +102,8 @@ if component in ('NativeLegacyDisplay','NativeHidInput'):
     command += ['-I', str(out)]
 if component == 'NativeAdreno':
     for inc_dir in (ROOT / 'drivers/Adreno740', ROOT / 'kits/ArmSmmu4K', ROOT / 'kits/AdrenoPM4', ROOT / 'kits/AdrenoFirmware',
-                    ROOT / 'kits/sheng', ROOT / 'kits/avalon', ROOT / 'kits/Sm8550Platform',
-                    ROOT / 'kits/Sm7675Platform', ROOT / 'build/sheng-gmu', ROOT / 'build/adreno740/include'):
+                    ROOT / 'kits/avalon', ROOT / 'kits/Sm7675Platform', ROOT / 'kits/sheng',
+                    ROOT / 'kits/Sm8550Platform', ROOT / 'build/sheng-gmu', ROOT / 'build/adreno740/include'):
         if inc_dir.is_dir():
             command += ['-I', str(inc_dir)]
     gmu_src = ROOT / 'build/sheng-gmu/ShengGmuSource.h'

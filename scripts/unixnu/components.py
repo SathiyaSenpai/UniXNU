@@ -102,7 +102,7 @@ def resolve(ctx, modules):
     entries = catalog(ctx)
     result = {key: value for key, value in modules.items()
               if key[0] in ('refer', 'patch', 'package', 'script') or
-              (value.origin == 'local (--local-module)' and key[1] not in entries)}
+              (value.origin in ('local (--local-module)', 'device', 'soc') and key[1] not in entries)}
     for spec in ctx.component_specs:
         identifier, kind = spec['id'], spec['kind']
         key = (kind, identifier)
@@ -117,6 +117,8 @@ def resolve(ctx, modules):
                 module = Module(kind, identifier, path, 'base')
             else:
                 source = {'name': identifier, 'kind': kind, 'git': spec['repository'], 'commit': spec['revision']}
+                if spec.get('path') and spec['repository'].rstrip('/').removesuffix('.git').endswith('-common'):
+                    source['path'] = spec['path']
                 module = Module(kind, identifier, None, 'git', source)
         if module.name != identifier:
             original = module
