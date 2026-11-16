@@ -101,9 +101,24 @@ if component=='NativeOfflineGPU':
 if component in ('NativeLegacyDisplay','NativeHidInput'):
     command += ['-I', str(out)]
 if component == 'NativeAdreno':
-    command += ['-I', str(ROOT / 'kits/ArmSmmu4K'), '-I', str(ROOT / 'kits/AdrenoPM4'),
-                '-I', str(ROOT / 'kits/sheng'), '-I', str(ROOT / 'kits/Sm8550Platform'), '-I', str(ROOT / 'kits/AdrenoFirmware'),
-                '-I', str(ROOT / 'build/sheng-gmu'), '-I', str(ROOT / 'build/adreno740/include')]
+    for inc_dir in (ROOT / 'drivers/Adreno740', ROOT / 'kits/ArmSmmu4K', ROOT / 'kits/AdrenoPM4', ROOT / 'kits/AdrenoFirmware',
+                    ROOT / 'kits/sheng', ROOT / 'kits/avalon', ROOT / 'kits/Sm8550Platform',
+                    ROOT / 'kits/Sm7675Platform', ROOT / 'build/sheng-gmu', ROOT / 'build/adreno740/include'):
+        if inc_dir.is_dir():
+            command += ['-I', str(inc_dir)]
+    gmu_src = ROOT / 'build/sheng-gmu/ShengGmuSource.h'
+    if gmu_src.is_file():
+        src_text = source.read_text()
+        patched_src = (
+            src_text
+            .replace('#include "NativeAdrenoUserClient.h"',
+                     '#ifndef SHENG_GMU_CORE_GPU_DELTA\n#define SHENG_GMU_CORE_GPU_DELTA 0x6a000u\n#endif\n#include "NativeAdrenoUserClient.h"')
+            .replace('0x23b14u*4u-0x6a000u', '0x23b14u*4u-SHENG_GMU_CORE_GPU_DELTA')
+            .replace('0x23b13u*4u-0x6a000u', '0x23b13u*4u-SHENG_GMU_CORE_GPU_DELTA')
+        )
+        patched_path = out / 'NativeAdrenoService.cpp'
+        patched_path.write_text(patched_src)
+        command = [str(patched_path) if arg == str(source) else arg for arg in command]
 (out / 'compile-command.json').write_text(json.dumps(command, indent=2) + '\n')
 result = subprocess.run(command, cwd=record['directory'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 (out / 'compile.log').write_text(result.stdout)
