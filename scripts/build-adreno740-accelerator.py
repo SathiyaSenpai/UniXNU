@@ -121,9 +121,16 @@ else:
     asm.write_text(''.join(f'.globl {n}\n.set {n}, {a:#x}\n' for n, a in sorted(bindings.items()) if n in undefined))
 run(['xcrun', 'clang', '-target', TRIPLE, '-isysroot', sdk, '-c', asm, '-o', OUT / 'original-bindings.o'])
 
-llvm = Path(run(['brew', '--prefix', 'llvm'], text=True).strip()) / 'bin'
+import shutil
+objcopy = shutil.which('llvm-objcopy')
+if not objcopy:
+    cand = Path(os.environ.get('UNIXNU_TOOLCHAIN', '/opt/unixnu-linux')) / 'llvm/bin/llvm-objcopy'
+    if cand.is_file():
+        objcopy = str(cand)
+    else:
+        objcopy = str(Path(run(['brew', '--prefix', 'llvm'], text=True).strip()) / 'bin/llvm-objcopy')
 late = OUT / 'NativeAdrenoAccelerator.late.o'
-run([llvm / 'llvm-objcopy', '--remove-section=__DATA,__mod_init_func',
+run([objcopy, '--remove-section=__DATA,__mod_init_func',
      '--globalize-symbol=__GLOBAL__sub_I_NativeAdrenoAccelerator.cpp', obj, late])
 
 

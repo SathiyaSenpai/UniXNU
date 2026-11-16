@@ -123,6 +123,21 @@ def main():
                                         *map(str,archives),*(f'-Wl,-force_load,{p}' for p in forced)]),
         'XNU_EXTERNAL_KERNEL_ARCHIVES='+' '.join(map(str,archives+forced)),
         f'OBJROOT={output}/{mode}-obj',f'SYMROOT={output}/{mode}-sym',f'DSTROOT={output}/{mode}-dst']
+    if os.uname().sysname == 'Linux':
+        clt_prefix = os.environ.get('CLT_PREFIX', os.path.join(os.environ.get('UNIXNU_TOOLCHAIN', '/opt/unixnu-linux'), 'CommandLineTools/usr'))
+        cpus = str(os.cpu_count() or 4)
+        mem_size = str(os.sysconf('SC_PHYS_PAGES') * os.sysconf('SC_PAGE_SIZE'))
+        args += [
+            'PLATFORM=iPhoneOS',
+            f'HOST_CC={clt_prefix}/bin/xnu-host-cc',
+            f'MIGCOM={clt_prefix}/libexec/migcom',
+            'TIGHTBEAMC=tightbeamc-not-supported',
+            'BUILD_DSYM=0',
+            f'MEMORY_SIZE={mem_size}',
+            f'SYSCTL_HW_PHYSICALCPU={cpus}',
+            f'SYSCTL_HW_LOGICALCPU={cpus}',
+            f'LD_KERNEL_LIBS={sdk}/usr/local/lib/kernel/libcc_kext.a',
+        ]
     (output/f'{mode}-command.json').write_text(json.dumps(args,indent=2)+'\n')
     with (output/f'{mode}-build.log').open('w') as log:
         result = subprocess.run(args,cwd=root,env=env,stdout=log,stderr=subprocess.STDOUT)
@@ -131,7 +146,7 @@ def main():
     # the authenticated pointer of an undefined weak symbol fails the link. The private copy stubs them: this
     # comparison kernel never runs, the prelink step reads its layout.
     build_log = (output / f'{mode}-build.log').read_text()
-    stub_names = sorted(set(re.findall(r'^\s+"(_(?:native_[a-z0-9_]+|boot_log_rounds|boot_cache_input_capture))"', build_log, re.M)))
+    stub_names = sorted(set(re.findall(r'^\s+"(_(?:native_[a-z0-9_]+|avalon_[a-z0-9_]+|boot_log_rounds|boot_cache_input_capture))"', build_log, re.M)))
     if stub_names:
         (output / 'native-stubs.c').write_text(''.join(f'long {name[1:]};\n' for name in stub_names))   # the linker names carry the leading underscore
         iphoneos = subprocess.check_output(['xcrun', '--sdk', 'iphoneos', '--show-sdk-path'], text=True).strip()
