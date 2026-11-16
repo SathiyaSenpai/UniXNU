@@ -87,14 +87,18 @@ def main():
             parser.error(f'no policy directory for {build_id}: pass --policy-dir or ship scripts/policies/*{build_id}')
         policies = shipped[0]
     policies = policies.resolve()
-    required_policy_files = [
-        policies / name / filename
-        for name in ('OS', 'SystemOS')
-        for filename in ('manifest.bin', 'trusted-key.bin', 'verification.json')
-    ]
-    missing_policy_files = [str(path) for path in required_policy_files if not path.is_file()]
-    if missing_policy_files:
-        parser.error('incomplete signed root-policy inputs: ' + ', '.join(missing_policy_files) +
+    tables_in_userdata = os.environ.get('XNU_SOURCE_STORAGE_TABLES', '') == 'userdata'
+    required_policy_files = []
+    for name in ('OS', 'SystemOS'):
+        if not (policies / name / 'manifest.bin').is_file() and not (
+            tables_in_userdata and (policies / name / 'manifest.header.bin').is_file()
+        ):
+            required_policy_files.append(policies / name / ('manifest.header.bin' if tables_in_userdata else 'manifest.bin'))
+        for filename in ('trusted-key.bin', 'verification.json'):
+            if not (policies / name / filename).is_file():
+                required_policy_files.append(policies / name / filename)
+    if required_policy_files:
+        parser.error('incomplete signed root-policy inputs: ' + ', '.join(str(path) for path in required_policy_files) +
                      '; restore the original verified OS/SystemOS policies with their existing owner anchor '
                      'under device scripts/policies/<profile>/, or pass --policy-dir')
     # The resolved build tree links the device package as kits/<board.kit>, while an

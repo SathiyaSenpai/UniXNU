@@ -192,7 +192,10 @@ def cmd_bootimg(ctx):
     dtb = ctx.option('dtb', 'UNIXNU_DTB')
     if dtb is None:
         configured_dtb = ctx.board.get('bootimg', {}).get('dtb')
-        dtb = ctx.tree / configured_dtb if configured_dtb else None
+        if configured_dtb:
+            dtb = ctx.tree / configured_dtb
+        elif getattr(ctx, 'work', None) and (ctx.work / 'device-tree/hardware.dtb').is_file():
+            dtb = ctx.work / 'device-tree/hardware.dtb'
     ramdisk = None
     if ctx.args.ramdisk and ctx.args.ramdisk != 'none':
         ramdisk = expand(ctx.args.ramdisk)
