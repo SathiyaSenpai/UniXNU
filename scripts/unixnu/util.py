@@ -60,8 +60,13 @@ def run(command, *, cwd=None, env=None, log_file=None, capture=False):
         with Path(log_file).open('w') as stream:
             result = subprocess.run(command, cwd=cwd, env=env, stdout=stream, stderr=subprocess.STDOUT)
         if result.returncode:
-            tail = Path(log_file).read_text(errors='replace').splitlines()[-30:]
-            print('\n'.join(tail), file=sys.stderr)
+            lines = Path(log_file).read_text(errors='replace').splitlines()
+            errors = [ln for ln in lines if re.search(r'(?:^|\s)(?:fatal )?error:|Undefined symbols|ld: |make\[\d+\]: \*\*\*', ln)]
+            if errors:
+                print('--- matching error lines ---', file=sys.stderr)
+                print('\n'.join(errors[:60]), file=sys.stderr)
+                print('--- log tail ---', file=sys.stderr)
+            print('\n'.join(lines[-40:]), file=sys.stderr)
             raise Error(f'{command[0]} failed ({result.returncode}); full log: {log_file}')
         return ''
     result = subprocess.run(command, cwd=cwd, env=env)
